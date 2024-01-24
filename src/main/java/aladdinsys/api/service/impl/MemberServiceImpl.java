@@ -8,11 +8,14 @@ import aladdinsys.api.service.MemberService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Optional;
@@ -32,32 +35,31 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     public String signUp(MemberDTO memberDTO) throws Exception {
-        String hashedPassword = new BCryptPasswordEncoder().encode(memberDTO.getPassword());
-        String hashedRegNo = new BCryptPasswordEncoder().encode(memberDTO.getRegNo());
+        String hashedPassword = new BCryptPasswordEncoder().encode(memberDTO.password());
+        String hashedRegNo = new BCryptPasswordEncoder().encode(memberDTO.regNo());
 
         Set<Role> roles = new HashSet<>();
 
         if (
-                ("홍길동".equals(memberDTO.getName()) && "860824-1655068".equals(memberDTO.getRegNo())) ||
-                ("김둘리".equals(memberDTO.getName()) && "921108-1582816".equals(memberDTO.getRegNo())) ||
-                ("마징가".equals(memberDTO.getName()) && "880601-2455116".equals(memberDTO.getRegNo())) ||
-                ("베지터".equals(memberDTO.getName()) && "910411-1656116".equals(memberDTO.getRegNo())) ||
-                ("손오공".equals(memberDTO.getName()) && "820326-2715702".equals(memberDTO.getRegNo()))
+                ("홍길동".equals(memberDTO.name()) && "860824-1655068".equals(memberDTO.regNo())) ||
+                ("김둘리".equals(memberDTO.name()) && "921108-1582816".equals(memberDTO.regNo())) ||
+                ("마징가".equals(memberDTO.name()) && "880601-2455116".equals(memberDTO.regNo())) ||
+                ("베지터".equals(memberDTO.name()) && "910411-1656116".equals(memberDTO.regNo())) ||
+                ("손오공".equals(memberDTO.name()) && "820326-2715702".equals(memberDTO.regNo()))
         ) {
             roles.add(Role.USER);
 
             MemberEntity newMember = new MemberEntity(
-                    memberDTO.getUserId(),
+                    memberDTO.userId(),
                     hashedPassword,
-                    memberDTO.getName(),
+                    memberDTO.name(),
                     hashedRegNo,
                     roles
             );
 
             memberRepository.save(newMember);
 
-            String jwtToken = generateJwtToken(newMember.getUserId());
-            return jwtToken;
+            return generateJwtToken(newMember.getUserId());
         } else {
             throw new IllegalArgumentException("조건을 만족하지 않습니다.");
         }
@@ -86,24 +88,25 @@ public class MemberServiceImpl implements MemberService {
             return null;
         }
 
-        MemberEntity user = memberRepository.findByUserId(userId);
+        MemberEntity user = memberRepository.findByUserId(userId)
+                .orElseThrow(() -> new IllegalArgumentException("조건을 만족하지 않습니다."));
+
         if (user == null) {
             return null;
         }
 
-        MemberDTO memberDTO = new MemberDTO();
-        memberDTO.setUserId(user.getUserId());
-        memberDTO.setPassword(user.getPassword());
-        memberDTO.setName(user.getName());
-        memberDTO.setRegNo(user.getRegNo());
-
-        return memberDTO;
+        return new MemberDTO(
+                user.getUserId(),
+                user.getPassword(),
+                user.getName(),
+                user.getRegNo());
     }
 
     private String getUserIdFromToken(String jwtToken) {
         try {
-            Claims claims = Jwts.parser()
-                    .setSigningKey(jwtSecret)
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
                     .parseClaimsJws(jwtToken)
                     .getBody();
             return claims.getSubject();
@@ -117,7 +120,12 @@ public class MemberServiceImpl implements MemberService {
                 .setSubject(userId)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + 86400000))
-                .signWith(SignatureAlgorithm.HS512, jwtSecret)
+                .signWith(getSigningKey(), SignatureAlgorithm.HS512)
                 .compact();
+    }
+
+    private SecretKey getSigningKey() {
+        byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 }

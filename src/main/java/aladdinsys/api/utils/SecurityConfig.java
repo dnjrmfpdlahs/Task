@@ -1,6 +1,6 @@
 package aladdinsys.api.utils;
 
-import aladdinsys.api.role.Role;
+import aladdinsys.api.jwt.JwtFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.config.annotation.SecurityConfigurerAdapter;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -16,21 +17,27 @@ import org.springframework.security.config.annotation.web.configurers.HeadersCon
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import java.io.PrintWriter;
 
 @Configuration
 @EnableWebSecurity
-public class SecurityConfig  {
+@RequiredArgsConstructor
+public class SecurityConfig extends SecurityConfigurerAdapter {
+
+    private final JwtFilter jwtFilter;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .headers((headerConfig) -> headerConfig.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(PathRequest.toH2Console()).permitAll()
                         .requestMatchers("/szs/signup", "/szs/login").permitAll()
-                        .requestMatchers("/szs/me").hasAnyAuthority("ADMIN")
+                        .requestMatchers("/szs/me").hasAuthority("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling((exceptionConfig) ->

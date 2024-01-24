@@ -2,8 +2,9 @@ package aladdinsys.api.dto;
 
 import lombok.Data;
 
-@Data
-public class LoginDTO {
-    private String userId;
-    private String password;
+public record LoginDTO(
+    String userId,
+    String password
+) {
+
 }

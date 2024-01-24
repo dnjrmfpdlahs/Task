@@ -21,9 +21,10 @@ public class MemberController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(LoginDTO dto) {
+    public ResponseEntity<String> login(
+            @RequestBody LoginDTO dto) {
         try {
-            String token = memberService.login(dto.getUserId(), dto.getPassword());
+            String token = memberService.login(dto.userId(), dto.password());
             return ResponseEntity.ok(token);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());

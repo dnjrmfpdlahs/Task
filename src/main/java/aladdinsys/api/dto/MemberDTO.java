@@ -1,11 +1,10 @@
 package aladdinsys.api.dto;
 
-import lombok.Data;
+public record MemberDTO (
+    String userId,
+    String password,
+    String name,
+    String regNo
+) {
 
-@Data
-public class MemberDTO {
-    public String userId;
-    public String password;
-    public String name;
-    public String regNo;
 }
