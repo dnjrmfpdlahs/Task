@@ -20,7 +20,7 @@ spring:
   security:
     user:
       name: admin
-      password: yourStrongPassword
+      password: $2a$10$yoM8yXFuOLMbrIwxgQe9a.xpWKLFG/ODDtdIfET8668yqcmq8b4wO
   datasource:
     driver-class-name: org.h2.Driver
     url: jdbc:h2:tcp://localhost/~/task
