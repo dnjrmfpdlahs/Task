@@ -54,7 +54,7 @@ public class MemberServiceImpl implements MemberService {
                 ("베지터".equals(memberDTO.name()) && "910411-1656116".equals(memberDTO.regNo())) ||
                 ("손오공".equals(memberDTO.name()) && "820326-2715702".equals(memberDTO.regNo()))
         ) {
-            roles.add(Role.ADMIN);
+            roles.add(Role.USER);
 
             MemberEntity newMember = new MemberEntity(
                     memberDTO.userId(),
@@ -94,6 +94,13 @@ public class MemberServiceImpl implements MemberService {
             return null;
         }
 
+        Claims claims = extractClaimsFromToken(jwtToken);
+        String userRole = (String) claims.get("role");
+
+        if ("USER".equals(userRole)) {
+            throw new SecurityException("사용자 권한이 없어 정보를 조회할 수 없습니다.");
+        }
+
         MemberEntity user = memberRepository.findByUserId(userId)
                 .orElseThrow(() -> new IllegalArgumentException("조건을 만족하지 않습니다."));
 
@@ -129,5 +136,17 @@ public class MemberServiceImpl implements MemberService {
     private SecretKey getSigningKey() {
         byte[] keyBytes = Decoders.BASE64.decode(jwtSecret);
         return Keys.hmacShaKeyFor(keyBytes);
+    }
+
+    private Claims extractClaimsFromToken(String jwtToken) {
+        try {
+            return Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(jwtToken)
+                    .getBody();
+        } catch (Exception e) {
+            throw new IllegalArgumentException("토큰 파싱 오류", e);
+        }
     }
 }

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @SpringBootTest
 public class SzsTest {
@@ -35,13 +36,10 @@ public class SzsTest {
         // given
         MemberDTO dto = new MemberDTO("kim", "1111", "김둘리", "921108-1582816");
 
-        // when
-        try {
+        // when & then
+        assertThrows(SecurityException.class, () -> {
             memberService.signUp(dto);
-        } catch (Exception e) {
-            System.out.println("아이디 중복");
-        }
-        // then
+        }, "아이디 중복");
     }
 
     @Test
@@ -50,19 +48,16 @@ public class SzsTest {
         // given
         MemberDTO dto = new MemberDTO("park", "1111", "박둘리", "921108-1582816");
 
-        // when
-        try {
+        // when & then
+        assertThrows(SecurityException.class, () -> {
             memberService.signUp(dto);
-        } catch (Exception e) {
-            System.out.println("조건 불일치");
-        }
-        // then
+        }, "회원가입 조건 불일치");
     }
 
     @Test
-    public void testLogin() {
+    public void testLoginSuccess() {
         // given
-        LoginDTO dto = new LoginDTO("kim", "11111");
+        LoginDTO dto = new LoginDTO("kim", "1111");
 
         // when
         String result = memberService.login(dto.userId(), dto.password());
@@ -73,9 +68,19 @@ public class SzsTest {
     }
 
     @Test
-    public void testGetInfo() {
+    public void testLoginFail() {
         // given
-        String token = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJraW0iLCJpYXQiOjE3MDYxNDIyODksImV4cCI6MTcwNjIyODY4OX0.80TrsHfqcps3rOP5sqg4favmpJ27A9qZvouX-dqaUsXQngfCU0GMUTNQ7yYsSCR6b5J8QkrCd_44qrNwdBxFCg";
+        LoginDTO dto = new LoginDTO("kim", "11111");
+        // when & then
+        assertThrows(SecurityException.class, () -> {
+            memberService.login(dto.userId(), dto.password());
+        }, "로그인 실패: 유효하지 않은 아이디 또는 비밀번호");
+    }
+
+    @Test
+    public void testGetInfoSuccess() {
+        // given
+        String token = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJzb24iLCJpYXQiOjE3MDYxNjY3NzAsImV4cCI6MTcwNjI1MzE3MH0.WZhbeK650vvliqjz78-tNYyXpMQ0sQIG8ebfbI5K0n7VkMNQBb2tQ04MG6R2OfmE5aoWcsVC7qFz3wIX_ioC3w";
 
         // when
         MemberDTO result = memberService.getInfo(token);
@@ -83,5 +88,16 @@ public class SzsTest {
         // then
         assertNotNull(result);
         System.out.println("회원조회 : " + result);
+    }
+
+    @Test
+    public void testGetInfoFail() {
+        // given
+        String token = "eyJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJraW0iLCJpYXQiOjE3MDYxNjY0MzUsImV4cCI6MTcwNjI1MjgzNX0.KEdT4bJcSML-CuLUKK0sLWe0nII8YiZWYfJtnVKIFMaCGgS2UDASFRlZ4uZcY5mmFAMwvvJ9pSbdQcbPZwZb6Q";
+
+        // when & then
+        assertThrows(SecurityException.class, () -> {
+            memberService.getInfo(token);
+        }, "사용자 권한이 없어 정보를 조회할 수 없습니다.");
     }
 }
