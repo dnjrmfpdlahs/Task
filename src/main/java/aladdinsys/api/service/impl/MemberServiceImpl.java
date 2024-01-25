@@ -74,7 +74,7 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     public String login(String userId, String password) {
-        Optional<MemberEntity> userOptional  = memberRepository.findByUserIdAndPassword(userId, password);
+        Optional<MemberEntity> userOptional = memberRepository.findByUserId(userId);
 
         if (userOptional.isPresent()) {
             MemberEntity user = userOptional.get();
@@ -83,8 +83,7 @@ public class MemberServiceImpl implements MemberService {
                 return generateJwtToken(userId);
             }
         }
-
-        return generateJwtToken(userId);
+        throw new IllegalArgumentException("로그인 실패: 유효하지 않은 아이디 또는 비밀번호");
     }
 
     @Override
@@ -97,10 +96,6 @@ public class MemberServiceImpl implements MemberService {
 
         MemberEntity user = memberRepository.findByUserId(userId)
                 .orElseThrow(() -> new IllegalArgumentException("조건을 만족하지 않습니다."));
-
-        if (user == null) {
-            return null;
-        }
 
         return new MemberDTO(
                 user.getUserId(),

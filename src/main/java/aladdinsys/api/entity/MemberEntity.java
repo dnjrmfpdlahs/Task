@@ -18,7 +18,6 @@ public class MemberEntity {
     private String name;
     private String regNo;
 
-    @ElementCollection
     @Enumerated(EnumType.STRING)
     private Set<Role> roles;
 
