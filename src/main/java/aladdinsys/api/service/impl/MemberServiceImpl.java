@@ -10,7 +10,6 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,22 +22,30 @@ import java.util.Set;
 
 @Service
 public class MemberServiceImpl implements MemberService {
-    @Autowired
-    private MemberRepository memberRepository;
+    private final MemberRepository memberRepository;
 
-    @Autowired
-    private BCryptPasswordEncoder passwordEncoder;
+    private final BCryptPasswordEncoder passwordEncoder;
 
     @Value("${jwt.secret}")
     private String jwtSecret;
 
+    public MemberServiceImpl(MemberRepository memberRepository, BCryptPasswordEncoder passwordEncoder) {
+        this.memberRepository = memberRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
 
     @Override
-    public String signUp(MemberDTO memberDTO) throws Exception {
+    public MemberEntity signUp(MemberDTO memberDTO) {
         String hashedPassword = new BCryptPasswordEncoder().encode(memberDTO.password());
         String hashedRegNo = new BCryptPasswordEncoder().encode(memberDTO.regNo());
 
         Set<Role> roles = new HashSet<>();
+
+        Optional<MemberEntity> existingMember = memberRepository.findByUserId(memberDTO.userId());
+        if (existingMember.isPresent()) {
+            throw new IllegalArgumentException("이미 존재하는 아이디입니다.");
+        }
 
         if (
                 ("홍길동".equals(memberDTO.name()) && "860824-1655068".equals(memberDTO.regNo())) ||
@@ -47,7 +54,7 @@ public class MemberServiceImpl implements MemberService {
                 ("베지터".equals(memberDTO.name()) && "910411-1656116".equals(memberDTO.regNo())) ||
                 ("손오공".equals(memberDTO.name()) && "820326-2715702".equals(memberDTO.regNo()))
         ) {
-            roles.add(Role.USER);
+            roles.add(Role.ADMIN);
 
             MemberEntity newMember = new MemberEntity(
                     memberDTO.userId(),
@@ -59,14 +66,14 @@ public class MemberServiceImpl implements MemberService {
 
             memberRepository.save(newMember);
 
-            return generateJwtToken(newMember.getUserId());
+            return newMember;
         } else {
             throw new IllegalArgumentException("조건을 만족하지 않습니다.");
         }
     }
 
     @Override
-    public String login(String userId, String password) throws Exception {
+    public String login(String userId, String password) {
         Optional<MemberEntity> userOptional  = memberRepository.findByUserIdAndPassword(userId, password);
 
         if (userOptional.isPresent()) {
@@ -102,7 +109,7 @@ public class MemberServiceImpl implements MemberService {
                 user.getRegNo());
     }
 
-    private String getUserIdFromToken(String jwtToken) {
+    public String getUserIdFromToken(String jwtToken) {
         try {
             Claims claims = Jwts.parserBuilder()
                     .setSigningKey(getSigningKey())
